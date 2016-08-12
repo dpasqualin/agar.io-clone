@@ -334,7 +334,7 @@ io.on('connection', function (socket) {
             });
 
             // start game if we have enough players
-            if (gameStatus.mode == 'robot' && gameStatus.players == gameStatus.maxPlayers) {
+            if (gameStatus.mode === 'robot' && gameStatus.players == gameStatus.maxPlayers) {
                 startGame();
             }
 
@@ -515,12 +515,13 @@ io.on('connection', function (socket) {
 
 function startGame() {
     gameStatus.lastWinner = false;
-    gameStatus.running = true;
     gameStatus.startTime = new Date().getTime();
+    setTimeLimitCheck();
+    gameStatus.running = true;
 }
 
 function finishGame(reason) {
-    console.log('finish', reason);
+    console.log('Game End', reason);
     users.forEach(function(element) {
         scores.push({ name: element.name, points: element.points, mass: element.massTotal });
     });
@@ -532,19 +533,30 @@ function finishGame(reason) {
     gameStatus.finishReason = reason;
 }
 
-function checkEnd() {
+function setTimeLimitCheck() {
+    // just a helper to set the timelimit count
+    if (gameStatus.mode === 'robot' && !gameStatus.running) {
+        setTimeout(checkTimeLimit, gameStatus.timeLimit);
+    }
+}
 
+function checkTimeLimit() {
+    // as the game might end and start again for different reasons,
+    // we have to check here again if the timelimit has reached
     if (gameStatus.mode === 'robot' && gameStatus.running) {
-        // time is over?
-        // TODO: it's not necessary to check for this all the time. It could be
-        // a setInterval(startTime + gameStatus.timeLimit, ...)
         var elapsed = new Date().getTime() - gameStatus.startTime;
+        console.log('elapsed', elapsed);
         if (gameStatus.timeLimit > 0 && elapsed >= gameStatus.timeLimit) {
             finishGame('time-limit');
-        // do we have a winner?
-    } else if (gameStatus.players == 1) {
-            finishGame('winner');
         }
+    }
+}
+
+function checkWinner() {
+
+    if (gameStatus.mode === 'robot' && gameStatus.running && gameStatus.players == 1) {
+        finishGame('winner');
+        return true;
     } else {
         return false;
     }
@@ -758,7 +770,7 @@ function moveloop() {
         tickPlayer(users[i]);
     }
 
-    checkEnd();
+    checkWinner();
 
     for (i=0; i < massFood.length; i++) {
         if(massFood[i].speed > 0) moveMass(massFood[i]);
