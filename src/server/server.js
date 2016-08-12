@@ -516,7 +516,10 @@ io.on('connection', function (socket) {
 function startGame() {
     gameStatus.lastWinner = false;
     gameStatus.startTime = new Date().getTime();
-    setTimeLimitCheck();
+    // just a helper to set the timelimit count
+    if (gameStatus.mode === 'robot' && gameStatus.timeLimit > 0) {
+        setTimeout(checkTimeLimit, gameStatus.timeLimit);
+    }
     gameStatus.running = true;
 }
 
@@ -531,13 +534,6 @@ function finishGame(reason) {
     gameStatus.running = false;
     gameStatus.startTime = undefined;
     gameStatus.finishReason = reason;
-}
-
-function setTimeLimitCheck() {
-    // just a helper to set the timelimit count
-    if (gameStatus.mode === 'robot' && !gameStatus.running) {
-        setTimeout(checkTimeLimit, gameStatus.timeLimit);
-    }
 }
 
 function checkTimeLimit() {
