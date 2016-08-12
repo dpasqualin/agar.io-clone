@@ -43,6 +43,7 @@ var gameStatus = {
     timeLimit: c.robotModeConf.timeLimit * 1000, // seconds to miliseconds
     maxPlayers: c.robotModeConf.maxPlayers,
     maxMass: c.robotModeConf.maxMass,
+    respawnTime: c.robotModeConf.respawnTime,
     players: 0,
     spectators: 0,
     lastWinner: undefined,
@@ -220,14 +221,10 @@ function balanceMass() {
     var foodToRemove = -Math.max(foodDiff, maxFoodDiff);
 
     if (foodToAdd > 0) {
-        //console.log('[DEBUG] Adding ' + foodToAdd + ' food to level!');
         addFood(foodToAdd);
-        //console.log('[DEBUG] Mass rebalanced!');
     }
     else if (foodToRemove > 0) {
-        //console.log('[DEBUG] Removing ' + foodToRemove + ' food from level!');
         removeFood(foodToRemove);
-        //console.log('[DEBUG] Mass rebalanced!');
     }
 
     var virusToAdd = c.maxVirus - virus.length;
@@ -241,38 +238,8 @@ io.on('connection', function (socket) {
     console.log('A user connected!', socket.handshake.query.type);
 
     var type = socket.handshake.query.type;
-    var radius = util.massToRadius(c.defaultPlayerMass);
-    var position = c.newPlayerInitialPosition == 'farthest' ? util.uniformPosition(users, radius) : util.randomPosition(radius);
 
-    var cells = [];
-    var massTotal = 0;
-    if(type === 'player') {
-        cells = [{
-            mass: c.defaultPlayerMass,
-            x: position.x,
-            y: position.y,
-            radius: radius
-        }];
-        massTotal = c.defaultPlayerMass;
-    }
-
-    var currentPlayer = {
-        id: socket.id,
-        x: position.x,
-        y: position.y,
-        w: c.defaultPlayerMass,
-        h: c.defaultPlayerMass,
-        points: 0,
-        cells: cells,
-        massTotal: massTotal,
-        hue: Math.round(Math.random() * 360),
-        type: type,
-        lastHeartbeat: new Date().getTime(),
-        target: {
-            x: 0,
-            y: 0
-        }
-    };
+    var currentPlayer = initPlayer(socket.id, type);
 
     socket.on('gotit', function (player) {
         console.log('[INFO] Player ' + player.name + ' connecting!');
@@ -293,52 +260,45 @@ io.on('connection', function (socket) {
             console.log('[INFO] Player ' + player.name + ' connected!');
             sockets[player.id] = socket;
 
-            var radius = util.massToRadius(c.defaultPlayerMass);
-            var position = c.newPlayerInitialPosition == 'farthest' ? util.uniformPosition(users, radius) : util.randomPosition(radius);
-
-            player.x = position.x;
-            player.y = position.y;
-            player.target.x = 0;
-            player.target.y = 0;
-            if(type === 'player') {
-                player.cells = [{
-                    mass: c.defaultPlayerMass,
-                    x: position.x,
-                    y: position.y,
-                    radius: radius
-                }];
-                player.massTotal = c.defaultPlayerMass;
+            if (type === 'player') {
                 gameStatus.players += 1;
-            }
-            else {
+            } else {
                 gameStatus.spectators += 1;
-                player.cells = [];
-                player.massTotal = 0;
             }
-            player.hue = Math.round(Math.random() * 360);
-            currentPlayer = player;
-            currentPlayer.points = 0;
+
+            currentPlayer.name = player.name.replace(/(<([^>]+)>)/ig, '').substring(0,25);
+            currentPlayer.screenWidth = player.screenWidth;
+            currentPlayer.screenHeight = player.screenHeight;
             currentPlayer.lastHeartbeat = new Date().getTime();
+
             users.push(currentPlayer);
 
             io.emit('playerJoin', { name: currentPlayer.name });
 
-            if(gameStatus.players < gameStatus.maxPlayers) {
+            if (gameStatus.players < gameStatus.maxPlayers) {
                 io.emit('waitingForPlayer', gameStatus.maxPlayers - gameStatus.players);
             }
 
-            socket.emit('gameSetup', {
+            var gameSetup = {
                 gameWidth: c.gameWidth,
                 gameHeight: c.gameHeight,
-                gameMode: c.gameMode
-            });
+                gameMode: c.gameMode,
+            };
+
+            if (c.gameMode === 'robot') {
+                gameSetup.timeLimit = c.robotModeConf.timeLimit;
+                gameSetup.respawnTime = c.robotModeConf.respawnTime;
+                gameSetup.killPoints = c.robotModeConf.killPoints;
+                gameSetup.timeToKick = c.robotModeConf.timeToKick;
+                gameSetup.maxMass = c.robotModeConf.maxMass;
+            }
+
+            socket.emit('gameSetup', gameSetup);
 
             // start game if we have enough players
             if (gameStatus.mode === 'robot' && gameStatus.players == gameStatus.maxPlayers) {
                 startGame();
             }
-
-            console.log('Total players: ' + users.length);
         }
 
     });
@@ -353,8 +313,13 @@ io.on('connection', function (socket) {
     });
 
     socket.on('respawn', function () {
-        if (util.findIndex(users, currentPlayer.id) > -1)
-            users.splice(util.findIndex(users, currentPlayer.id), 1);
+        // this respawn is triggered when users dies and want to play again
+        // in the robot mode respawn has a different behavior, as the user
+        // points should remain the same
+        var user_idx = util.findIndex(users, currentPlayer.id);
+        if (user_idx > -1) {
+            users.splice(user_idx, 1);
+        }
         socket.emit('welcome', currentPlayer);
         console.log('[INFO] User ' + currentPlayer.name + ' respawned!');
     });
@@ -476,6 +441,7 @@ io.on('connection', function (socket) {
             }
         }
     });
+
     socket.on('2', function(virusCell) {
         function splitCell(cell) {
             cell.mass = cell.mass/2;
@@ -541,7 +507,6 @@ function checkTimeLimit() {
     // we have to check here again if the timelimit has reached
     if (gameStatus.mode === 'robot' && gameStatus.running) {
         var elapsed = new Date().getTime() - gameStatus.startTime;
-        console.log('elapsed', elapsed);
         if (gameStatus.timeLimit > 0 && elapsed >= gameStatus.timeLimit) {
             finishGame('time-limit');
         }
@@ -633,21 +598,29 @@ function tickPlayer(currentPlayer) {
 
         if (aUser.mass > bUser.mass * 1.1 && aUser.radius > distance) {
             console.log('[DEBUG] Killing user: ' + bUser.id);
-            console.log('[DEBUG] Collision info:');
-            console.log(collision);
 
             var numUserB = util.findIndex(users, bUser.id);
             if (numUserB > -1) {
-                if(users[numUserB].cells.length > 1) {
+                if (users[numUserB].cells.length > 1) {
                     users[numUserB].massTotal -= bUser.mass;
                     users[numUserB].cells.splice(bUser.num, 1);
                 } else {
                     var user = users[numUserB];
-                    scores.push({ name: user.name, points: user.points, mass: user.massTotal });
-                    users.splice(numUserB, 1);
-                    io.emit('playerDied', { name: bUser.name });
-                    gameStatus.players -= 1;
-                    sockets[bUser.id].emit('RIP');
+
+                    // -1 means no respawn, so player dies..
+                    if (gameStatus.respawnTime < 0) {
+                        scores.push({
+                            name: user.name,
+                            points: user.points,
+                            mass: user.massTotal
+                        });
+                        users.splice(numUserB, 1);
+                        io.emit('playerDied', { name: bUser.name });
+                        gameStatus.players -= 1;
+                        sockets[bUser.id].emit('RIP');
+                    } else {
+                        prepareRespawn(numUserB);
+                    }
                 }
             }
 
@@ -656,8 +629,9 @@ function tickPlayer(currentPlayer) {
                 users[numUserA].massTotal += bUser.mass;
             }
 
-            // If aUser and bUser were swapped, we cant just increment aUser mass, because its a
-            // new object (not a reference to the cell) and will not update the game correctly.
+            // FIXME: If aUser and bUser were swapped, we cant just increment
+            // aUser mass, because its a new object (not a reference to the
+            // cell) and will not update the game correctly.
             var eaterCell = (swapped) ? users[numUserA].cells[aUser.num] : aUser;
             eaterCell.mass += bUser.mass;
             checkPoint(aUser);
@@ -736,9 +710,99 @@ function tickPlayer(currentPlayer) {
     }
 }
 
+function prepareRespawn(userIdx) {
+
+    var player = users[userIdx];
+
+    var opts = {
+        points: player.points,
+        name: player.name,
+        hue: player.hue,
+        waitingRespawn: true,
+        screenWidth: player.screenWidth,
+        screenHeight: player.screenHeight
+    };
+
+    resetPlayer(users[userIdx], opts);
+
+    var id = player.id;
+    setTimeout(function() {
+        var userIdx = util.findIndex(users, id);
+        if (userIdx >= 0) {
+            users[userIdx].waitingRespawn = false;
+        }
+    }, gameStatus.respawnTime*1000);
+}
+
+// returns a player definition, needs an id, type (spectator or player) and
+// optionally receives "opts", that will override default values for a player
+function initPlayer(id, type, opts) {
+
+    var radius = util.massToRadius(c.defaultPlayerMass);
+    var position;
+
+    if (c.newPlayerInitialPosition == 'farthest') {
+        position = util.uniformPosition(users, radius);
+    } else {
+        position = util.randomPosition(radius);
+    }
+
+    var cells = [];
+    var massTotal = 0;
+
+    if (type === 'player') {
+        cells = [{
+            mass: c.defaultPlayerMass,
+            x: position.x,
+            y: position.y,
+            radius: radius,
+            speed: 0
+        }];
+        massTotal = c.defaultPlayerMass;
+    }
+
+    var currentPlayer = {
+        id: id,
+        x: position.x,
+        y: position.y,
+        w: c.defaultPlayerMass,
+        h: c.defaultPlayerMass,
+        points: 0,
+        cells: cells,
+        massTotal: massTotal,
+        hue: Math.round(Math.random() * 360),
+        type: type,
+        lastHeartbeat: new Date().getTime(),
+        target: {
+            x: 0,
+            y: 0
+        }
+    };
+
+    return currentPlayer;
+}
+
+// FIXME: this function basically replaces player data. It is necessary because
+// socket.on('0'..) uses a reference to the player object, so we can't just
+// replace it, we need to keep the reference...
+// opts is used to replace default values of a new player
+function resetPlayer(player, opts) {
+    var new_player = initPlayer(player.id, player.type);
+    var key;
+
+    // reset player
+    for (key in new_player) {
+        player[key] = new_player[key];
+    }
+
+    // override what necessary
+    for (key in opts) {
+        player[key] = opts[key];
+    }
+}
+
 function checkPoint(player) {
     if (gameStatus.mode === 'robot' && player.massTotal >= gameStatus.maxMass) {
-
         player.cells = [{
             mass: c.defaultPlayerMass,
             x: player.x,
@@ -747,7 +811,6 @@ function checkPoint(player) {
         }];
 
         player.massTotal = c.defaultPlayerMass;
-
         player.points += 1;
 
         io.emit('checkPoint', player.name);
@@ -763,13 +826,17 @@ function moveloop() {
     }
 
     for (var i = 0; i < users.length; i++) {
-        tickPlayer(users[i]);
+        if (!users[i].waitingRespawn) {
+            tickPlayer(users[i]);
+        }
     }
 
     checkWinner();
 
     for (i=0; i < massFood.length; i++) {
-        if(massFood[i].speed > 0) moveMass(massFood[i]);
+        if (massFood[i].speed > 0) {
+            moveMass(massFood[i]);
+        }
     }
 }
 
@@ -824,6 +891,7 @@ function gameloop() {
 
         if (gameStatus.mode === 'robot') {
             users.sort( function(a, b) {
+                // use massTotal as a tiebreaker
                 if(a.points != b.points) {
                     return b.points - a.points;
                 } else {
@@ -942,7 +1010,9 @@ function sendUpdates() {
             })
             .filter(function(f) { return f; });
 
-        sockets[u.id].emit('serverTellPlayerMove', visibleCells, visibleFood, visibleMass, visibleVirus);
+        sockets[u.id].emit('serverTellPlayerMove', visibleCells, visibleFood,
+                            visibleMass, visibleVirus);
+
         if (leaderboardChanged) {
             sockets[u.id].emit('leaderboard', {
                 players: users.length,

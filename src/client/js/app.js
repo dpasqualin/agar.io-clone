@@ -274,6 +274,7 @@ function setupSocket(socket) {
                 i = userData.length;
             }
         }
+
         if(global.playerType == 'player') {
             var xoffset = player.x - playerData.x;
             var yoffset = player.y - playerData.y;
