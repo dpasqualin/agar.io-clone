@@ -523,17 +523,52 @@ function startGame() {
     gameStatus.running = true;
 }
 
+function createPlayer(previousPlayer) {
+    var radius = util.massToRadius(c.defaultPlayerMass);
+    var position = c.newPlayerInitialPosition == 'farthest' ? util.uniformPosition(users, radius) : util.randomPosition(radius);
+    return {
+        id: previousPlayer.id,
+        x: position.x,
+        y: position.y,
+        w: c.defaultPlayerMass,
+        h: c.defaultPlayerMass,
+        points: 0,
+        cells: [{
+            mass: c.defaultPlayerMass,
+            x: position.x,
+            y: position.y,
+            radius: radius,
+            speed: c.defaultSpeed
+        }],
+        massTotal: c.defaultPlayerMass,
+        hue: Math.round(Math.random() * 360),
+        type: previousPlayer.type,
+        lastHeartbeat: new Date().getTime(),
+        target: {
+            x: 0,
+            y: 0
+        },
+        name: previousPlayer.name,
+        screenWidth: previousPlayer.screenWidth,
+        screenHeight: previousPlayer.screenHeight,
+    };
+}
+
 function finishGame(reason) {
     console.log('Game End', reason);
-    users.forEach(function(element) {
-        scores.push({ name: element.name, points: element.points, mass: element.massTotal });
+    users.forEach(function(element, index) {
+        scores.push({ name: element.name, points: element.points, mass: element.massTotal, usersIndex: index });
     });
     sortUsersByPoints();
     io.emit('ranking', scores);
-    gameStatus.lastWinner = users[0];
+    gameStatus.lastWinner = users[scores[0].usersIndex];
     gameStatus.running = false;
     gameStatus.startTime = undefined;
     gameStatus.finishReason = reason;
+    // reset players when the game is finished
+    users.forEach(function (element, index) {
+        users[index] = createPlayer(element);
+    });
 }
 
 function checkTimeLimit() {
@@ -549,7 +584,6 @@ function checkTimeLimit() {
 }
 
 function checkWinner() {
-
     if (gameStatus.mode === 'robot' && gameStatus.running && gameStatus.players == 1) {
         finishGame('winner');
         return true;
@@ -643,7 +677,7 @@ function tickPlayer(currentPlayer) {
                     users[numUserB].cells.splice(bUser.num, 1);
                 } else {
                     var user = users[numUserB];
-                    scores.push({ name: user.name, points: user.points, mass: user.massTotal });
+                    scores.push({ name: user.name, points: user.points, mass: user.massTotal, usersIndex: numUserB });
                     users.splice(numUserB, 1);
                     io.emit('playerDied', { name: bUser.name });
                     gameStatus.players -= 1;
