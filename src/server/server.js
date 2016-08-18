@@ -662,6 +662,7 @@ function tickPlayer(currentPlayer) {
             var numUserA = util.findIndex(users, aUser.id);
             if (numUserA > -1) {
                 users[numUserA].massTotal += bUser.mass;
+                users[numUserA].points += c.robotModeConf.killPoints;
             }
 
             // FIXME: If aUser and bUser were swapped, we cant just increment
