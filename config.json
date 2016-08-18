@@ -26,7 +26,7 @@
         "timeLimit": 60,
         "respawnTime": 5,
         "killPoints": 1,
-        "timeToKick": 0,
+        "timeToKick": 20,
         "maxMass": 100
     },
     "gameMass": 5000,

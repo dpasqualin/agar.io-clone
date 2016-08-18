@@ -27,6 +27,7 @@ var sockets = {};
 
 var leaderboard = [];
 var leaderboardChanged = false;
+var kickIntervalId;
 
 var V = SAT.Vector;
 var C = SAT.Circle;
@@ -479,6 +480,12 @@ io.on('connection', function (socket) {
     });
 });
 
+function kickLastPlayer() {
+    sortUsersByPoints();
+    var id = users[users.length-1].id;
+    sockets[id].emit('kick', 'Not enough points, try harder next time');
+}
+
 function startGame() {
     gameStatus.lastWinner = false;
     gameStatus.startTime = new Date().getTime();
@@ -486,6 +493,16 @@ function startGame() {
     if (gameStatus.mode === 'robot' && gameStatus.timeLimit > 0) {
         setTimeout(checkTimeLimit, gameStatus.timeLimit);
     }
+
+    var timeToKick = c.robotModeConf.timeToKick;
+
+    if (timeToKick > 0) {
+        if (kickIntervalId) {
+            clearInterval(kickIntervalId);
+        }
+        kickIntervalId = setInterval(kickLastPlayer, timeToKick*1000);
+    }
+
     gameStatus.running = true;
 }
 
@@ -529,6 +546,9 @@ function finishGame(reason) {
     io.emit('ranking', scores);
     gameStatus.lastWinner = users[scores[0].usersIndex];
     gameStatus.running = false;
+    if (kickIntervalId) {
+        clearInterval(kickIntervalId);
+    }
     gameStatus.startTime = undefined;
     gameStatus.finishReason = reason;
     // reset players when the game is finished
