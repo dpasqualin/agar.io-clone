@@ -41,17 +41,25 @@ module.exports = {
 
         socket.on('serverTellPlayerMove', function (userData, foodsList, massList, virusList) {
             var playerData;
+            var data;
+            var enemyData = [];
 
             // get player data from all users
             for (var i = 0; i < userData.length; i++) {
-                if (typeof(userData[i].id) == "undefined") {
-                    playerData = userData[i];
+                data = userData[i];
+
+                if (typeof(data.id) == "undefined") {
+                    playerData = data;
                     userData.splice(i, 1);
-                    break;
+                } else if (!data.waitingRespawn) {
+                    // players waiting to respawn should be invisible to
+                    // robots
+                    enemyData.push(data);
                 }
+
             }
 
-            var move = controller.step(playerData, userData, foodsList, massList, virusList);
+            var move = controller.step(playerData, enemyData, foodsList, massList, virusList);
 
             if (move && !isNaN(move.x) && !isNaN(move.y)) {
                 socket.emit('0', move);
