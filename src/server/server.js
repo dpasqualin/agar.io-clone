@@ -549,6 +549,7 @@ function finishGame(reason) {
     if (kickIntervalId) {
         clearInterval(kickIntervalId);
     }
+    scores = [];
     gameStatus.startTime = undefined;
     gameStatus.finishReason = reason;
     // reset players when the game is finished
