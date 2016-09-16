@@ -23,10 +23,10 @@
     "gameMode": "robot",
     "robotModeConf": {
         "maxPlayers": 2,
-        "timeLimit": 60,
+        "timeLimit": 180,
         "respawnTime": 5,
         "killPoints": 1,
-        "timeToKick": 20,
+        "timeToKick": 0,
         "maxMass": 100
     },
     "gameMass": 5000,
