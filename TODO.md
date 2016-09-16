@@ -9,5 +9,5 @@
 ### FIXMEs
 | Filename | line # | FIXME
 |:------|:------:|:------
-| server/server.js | 689 | If aUser and bUser were swapped, we cant just increment
-| server/server.js | 842 | this function basically replaces player data. It is necessary because
+| server/server.js | 699 | If aUser and bUser were swapped, we cant just increment
+| server/server.js | 852 | this function basically replaces player data. It is necessary because

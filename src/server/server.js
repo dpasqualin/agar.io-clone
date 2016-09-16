@@ -481,9 +481,19 @@ io.on('connection', function (socket) {
 });
 
 function kickLastPlayer() {
+    var reason = 'Not enough points, try harder next time';
+    var i;
     sortUsersByPoints();
-    var id = users[users.length-1].id;
-    sockets[id].emit('kick', 'Not enough points, try harder next time');
+
+    // find a player that is not an spectator
+    console.log('time to kick someone');
+    for (i=users.length-1; i>=0; i--) {
+        if (users[i] && users[i].type === 'player') {
+            sockets[users[i].id].emit('kick', reason);
+            sockets[users[i].id].disconnect();
+            break;
+        }
+    }
 }
 
 function startGame() {
