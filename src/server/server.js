@@ -292,6 +292,8 @@ io.on('connection', function (socket) {
                 gameSetup.killPoints = c.robotModeConf.killPoints;
                 gameSetup.timeToKick = c.robotModeConf.timeToKick;
                 gameSetup.maxMass = c.robotModeConf.maxMass;
+                gameSetup.fireFood = c.fireFood;
+                gameSetup.splitSpeed = c.splitSpeed;
             }
 
             socket.emit('gameSetup', gameSetup);
