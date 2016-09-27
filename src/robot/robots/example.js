@@ -26,7 +26,7 @@ module.exports = {
         // get biggest cell
         var biggest_cell = get_my_biggest_cell(playerData.cells);
 
-        // get a new target food if we don't have a target or it was eaten already
+        // get a new target food if we don't have a target or it has been eaten already
         if (!target_food || was_eaten(target_food, foodsList)) {
             target_food = get_closest_food(biggest_cell, foodsList);
         }
@@ -49,8 +49,9 @@ module.exports = {
 };
 
 // when no food is in sight, this robot will just happily walk around.
-// the default direction if up, but when near the top it will turn right, then
-// down when near the right border, and finally left and up again if necessary.
+// the default direction is up, but when it gets near the top it will turn
+// right, then down when near the right border, and finally left and up again,
+// if necessary.
 function wanderer(my_position) {
     var wanderer_direction = 'UP';
     var target = {x: 0, y: 0};
@@ -96,7 +97,7 @@ function was_eaten(food, foodsList) {
     return exist.length === 0;
 }
 
-// return the food that is closest to origin
+// return the food that is closest to origin (usually one of our cells)
 function get_closest_food(origin, foodsList) {
 
     // shit, nothing to eat :(
@@ -111,11 +112,13 @@ function get_closest_food(origin, foodsList) {
 
     // sort descending
     food_distances.sort(function(a, b) { return a.distance - b.distance; });
+
     closest = food_distances[0].food;
+
     return closest;
 }
 
-// return the cell the contains more mass
+// return the more massive cell
 function get_my_biggest_cell(userData) {
     // sort descending
     userData.sort(function(a, b) { return b.mass - a.mass; });
