@@ -22,8 +22,8 @@
     "adminPass": "DEFAULT",
     "gameMode": "robot",
     "robotModeConf": {
-        "maxPlayers": 4,
-        "timeLimit": 20,
+        "maxPlayers": 2,
+        "timeLimit": 180,
         "respawnTime": 5,
         "killPoints": 1,
         "timeToKick": 0,
