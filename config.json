@@ -22,8 +22,8 @@
     "adminPass": "DEFAULT",
     "gameMode": "robot",
     "robotModeConf": {
-        "maxPlayers": 2,
-        "timeLimit": 180,
+        "maxPlayers": 4,
+        "timeLimit": 20,
         "respawnTime": 5,
         "killPoints": 1,
         "timeToKick": 0,
@@ -41,5 +41,6 @@
     "newPlayerInitialPosition": "farthest",
     "massLossRate": 1,
     "minMassLoss": 50,
-    "mergeTimer": 15
+    "mergeTimer": 15,
+    "rankingDisplayLimit": 10
 }
