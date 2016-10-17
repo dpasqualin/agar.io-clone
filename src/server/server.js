@@ -48,7 +48,9 @@ var gameStatus = {
     players: 0,
     spectators: 0,
     lastWinner: undefined,
-    finishReason: undefined
+    finishReason: undefined,
+    rankingDisplayLimit: c.rankingDisplayLimit,
+    scores: []
 };
 
 app.use(express.static(__dirname + '/../client'));
@@ -556,7 +558,11 @@ function finishGame(reason) {
     });
     sortUsersByPoints();
     io.emit('ranking', scores);
-    gameStatus.lastWinner = users[scores[0].usersIndex];
+    gameStatus.lastWinner = true;
+    gameStatus.scores = [];
+    for(var i = 0; i < scores.length; ++i) {
+        gameStatus.scores.push(scores[i]);
+    }
     gameStatus.running = false;
     if (kickIntervalId) {
         clearInterval(kickIntervalId);
@@ -939,11 +945,23 @@ function gameloop() {
         var msg = 'Waiting for players: ' + players + '/' + maxPlayers;
 
         if (gameStatus.lastWinner) {
-            leaderboard.push({
-                id: null,
-                name: 'WINNER: ' + gameStatus.lastWinner.name,
-                score: ''
-            });
+            if (gameStatus.scores.length > 0) {
+                leaderboard.push({
+                    id: null,
+                    name: 'WINNER: ' + gameStatus.scores[0].name,
+                    score: gameStatus.scores[0].points
+                });
+            }
+
+            var rankingDisplayLimit = (gameStatus.rankingDisplayLimit < gameStatus.scores.length) ?
+                gameStatus.rankingDisplayLimit : gameStatus.scores.length;
+            for (var j = 1; j < rankingDisplayLimit; ++j) {
+                leaderboard.push({
+                    id: null,
+                    name: gameStatus.scores[j].name,
+                    score: gameStatus.scores[j].points
+                });
+            }
         }
 
         leaderboard.push({
