@@ -554,7 +554,14 @@ function createPlayer(previousPlayer) {
 function finishGame(reason) {
     console.log('Game End', reason);
     users.forEach(function(element, index) {
-        scores.push({ name: element.name, points: element.points, mass: element.massTotal, usersIndex: index });
+        if (element.type === 'player') {
+            scores.push({
+                name: element.name,
+                points: element.points,
+                mass: element.massTotal,
+                usersIndex: index
+            });
+        }
     });
     sortUsersByPoints();
     io.emit('ranking', scores);
@@ -570,10 +577,6 @@ function finishGame(reason) {
     scores = [];
     gameStatus.startTime = undefined;
     gameStatus.finishReason = reason;
-    // reset players when the game is finished
-    users.forEach(function (element, index) {
-        users[index] = createPlayer(element);
-    });
 }
 
 function checkTimeLimit() {
@@ -945,21 +948,25 @@ function gameloop() {
         var msg = 'Waiting for players: ' + players + '/' + maxPlayers;
 
         if (gameStatus.lastWinner) {
+            var winner = gameStatus.scores[0];
             if (gameStatus.scores.length > 0) {
                 leaderboard.push({
                     id: null,
-                    name: 'WINNER: ' + gameStatus.scores[0].name,
-                    score: gameStatus.scores[0].points
+                    name: 'WINNER: ' + winner.name,
+                    score: winner.points + ' (' + winner.mass + ')'
                 });
             }
 
-            var rankingDisplayLimit = (gameStatus.rankingDisplayLimit < gameStatus.scores.length) ?
-                gameStatus.rankingDisplayLimit : gameStatus.scores.length;
+            var rdl = gameStatus.rankingDisplayLimit;
+            var gsl = gameStatus.scores.length;
+            var rankingDisplayLimit = (rdl < gsl) ? rdl : gsl;
+
             for (var j = 1; j < rankingDisplayLimit; ++j) {
+                var player = gameStatus.scores[j];
                 leaderboard.push({
                     id: null,
-                    name: gameStatus.scores[j].name,
-                    score: gameStatus.scores[j].points
+                    name: player.name,
+                    score: player.points + ' (' + player.mass + ')'
                 });
             }
         }
