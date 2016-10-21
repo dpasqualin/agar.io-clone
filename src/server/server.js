@@ -296,6 +296,7 @@ io.on('connection', function (socket) {
                 gameSetup.maxMass = c.robotModeConf.maxMass;
                 gameSetup.fireFood = c.fireFood;
                 gameSetup.splitSpeed = c.splitSpeed;
+                gameSetup.minVisibleDistance = c.robotModeConf.minVisibleDistance;
             }
 
             socket.emit('gameSetup', gameSetup);
