@@ -953,7 +953,7 @@ function gameloop() {
                 leaderboard.push({
                     id: null,
                     name: 'WINNER: ' + winner.name,
-                    score: winner.points + ' (' + winner.mass + ')'
+                    score: winner.points + ' (' + Math.round(winner.mass) + ')'
                 });
             }
 
@@ -966,7 +966,7 @@ function gameloop() {
                 leaderboard.push({
                     id: null,
                     name: player.name,
-                    score: player.points + ' (' + player.mass + ')'
+                    score: player.points + ' (' + Math.round(player.mass) + ')'
                 });
             }
         }
