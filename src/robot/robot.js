@@ -59,7 +59,12 @@ module.exports = {
 
             }
 
-            var move = controller.step(playerData, enemyData, foodsList, massList, virusList);
+            var move = null;
+            try {
+                move = controller.step(playerData, enemyData, foodsList, massList, virusList);
+            } catch(err) {
+                console.log('[ERR] Error in controller, player',playerData.name);
+            }
 
             if (move && !isNaN(move.x) && !isNaN(move.y)) {
                 socket.emit('0', move);
