@@ -1110,7 +1110,8 @@ function sendUpdates() {
                                 cells: f.cells,
                                 massTotal: Math.round(f.massTotal),
                                 hue: f.hue,
-                                name: f.name
+                                name: f.name,
+                                waitingRespawn: f.waitingRespawn
                             };
                         } else {
                             //console.log("Nombre: " + f.name + " Es Usuario");
@@ -1119,7 +1120,8 @@ function sendUpdates() {
                                 y: f.y,
                                 cells: f.cells,
                                 massTotal: Math.round(f.massTotal),
-                                hue: f.hue
+                                hue: f.hue,
+                                waitingRespawn: f.waitingRespawn
                             };
                         }
                     }
