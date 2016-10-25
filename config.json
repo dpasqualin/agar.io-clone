@@ -22,7 +22,8 @@
     "adminPass": "DEFAULT",
     "gameMode": "robot",
     "robotModeConf": {
-        "maxPlayers": 2,
+        "minVisibleDistance": 250,
+        "maxPlayers": 4,
         "timeLimit": 180,
         "respawnTime": 5,
         "killPoints": 1,

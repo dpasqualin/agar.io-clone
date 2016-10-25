@@ -296,6 +296,7 @@ io.on('connection', function (socket) {
                 gameSetup.maxMass = c.robotModeConf.maxMass;
                 gameSetup.fireFood = c.fireFood;
                 gameSetup.splitSpeed = c.splitSpeed;
+                gameSetup.minVisibleDistance = c.robotModeConf.minVisibleDistance;
             }
 
             socket.emit('gameSetup', gameSetup);
@@ -1031,6 +1032,12 @@ function gameloop() {
     }
 }
 
+function isVisible(f, u) {
+    var radius = f.radius || 0;
+    // the bigger you are, the further you see
+    return util.distance(f, u) - radius <= c.robotModeConf.minVisibleDistance;
+}
+
 function sendUpdates() {
     users.forEach( function(u) {
         // center the view if x/y is undefined, this will happen for spectators
@@ -1039,7 +1046,10 @@ function sendUpdates() {
 
         var visibleFood  = food
             .map(function(f) {
-                if ( f.x > u.x - u.screenWidth/2 - 20 &&
+                if (gameStatus.mode === 'robot' && isVisible(f, u)) {
+                    return f;
+                }
+                else if ( f.x > u.x - u.screenWidth/2 - 20 &&
                     f.x < u.x + u.screenWidth/2 + 20 &&
                     f.y > u.y - u.screenHeight/2 - 20 &&
                     f.y < u.y + u.screenHeight/2 + 20) {
@@ -1050,7 +1060,10 @@ function sendUpdates() {
 
         var visibleVirus  = virus
             .map(function(f) {
-                if ( f.x > u.x - u.screenWidth/2 - f.radius &&
+                if (gameStatus.mode === 'robot' && isVisible(f, u)) {
+                    return f;
+                }
+                else if ( f.x > u.x - u.screenWidth/2 - f.radius &&
                     f.x < u.x + u.screenWidth/2 + f.radius &&
                     f.y > u.y - u.screenHeight/2 - f.radius &&
                     f.y < u.y + u.screenHeight/2 + f.radius) {
@@ -1061,7 +1074,10 @@ function sendUpdates() {
 
         var visibleMass = massFood
             .map(function(f) {
-                if ( f.x+f.radius > u.x - u.screenWidth/2 - 20 &&
+                if (gameStatus.mode === 'robot' && isVisible(f, u)) {
+                    return f;
+                }
+                else if ( f.x+f.radius > u.x - u.screenWidth/2 - 20 &&
                     f.x-f.radius < u.x + u.screenWidth/2 + 20 &&
                     f.y+f.radius > u.y - u.screenHeight/2 - 20 &&
                     f.y-f.radius < u.y + u.screenHeight/2 + 20) {
@@ -1074,10 +1090,17 @@ function sendUpdates() {
             .map(function(f) {
                 for(var z=0; z<f.cells.length; z++)
                 {
-                    if ( f.cells[z].x+f.cells[z].radius > u.x - u.screenWidth/2 - 20 &&
+                    var visible = false;
+                    if (gameStatus.mode === 'robot' && isVisible(f.cells[z], u)) {
+                        visible = true;
+                    } else if ( f.cells[z].x+f.cells[z].radius > u.x - u.screenWidth/2 - 20 &&
                         f.cells[z].x-f.cells[z].radius < u.x + u.screenWidth/2 + 20 &&
                         f.cells[z].y+f.cells[z].radius > u.y - u.screenHeight/2 - 20 &&
                         f.cells[z].y-f.cells[z].radius < u.y + u.screenHeight/2 + 20) {
+                            visible = true;
+                    }
+
+                    if (visible) {
                         z = f.cells.lenth;
                         if(f.id !== u.id) {
                             return {
@@ -1096,7 +1119,7 @@ function sendUpdates() {
                                 y: f.y,
                                 cells: f.cells,
                                 massTotal: Math.round(f.massTotal),
-                                hue: f.hue,
+                                hue: f.hue
                             };
                         }
                     }
