@@ -56,7 +56,6 @@ module.exports = {
                     // robots
                     enemyData.push(data);
                 }
-
             }
 
             var move = null;
@@ -73,7 +72,7 @@ module.exports = {
             } else if (move === 'split') {
                 socket.emit('2');
             } else {
-                console.log('[WARN] Robot name, invalid move:', move);
+                console.log('[WARN] Robot', playerData.name, 'invalid move:', move);
             }
         });
 
