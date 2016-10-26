@@ -1121,6 +1121,7 @@ function sendUpdates() {
                                 cells: f.cells,
                                 massTotal: Math.round(f.massTotal),
                                 hue: f.hue,
+                                name: f.name,
                                 waitingRespawn: f.waitingRespawn
                             };
                         }
